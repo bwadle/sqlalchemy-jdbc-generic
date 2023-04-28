@@ -11,11 +11,22 @@ The genesis of this codebase was heavily influenced by `JayDeBeAPI` and `sqlalch
 
 ## Install
 
-Install using pip:
+Build and install using `pip` and `setuptools`:
 
-```
-pip install sqlalchemy-jdbc-generic
-```
+1. Clone repository
+2. Navigate to cloned directory
+3. Build wheel
+    ```
+    python -m build -w
+    ```
+4. pip install from built wheel file
+    ```
+    python -m pip install --find-links=dist sqlalchemy-jdbc-generic
+    ```
+> codebase has not yet been submitted to pypi.  This will happen in future releases.
+>    ```
+>    pip install sqlalchemy-jdbc-generic
+>    ```
 
 ## Usage
 
