@@ -13,7 +13,7 @@ SQLAlchemy https://www.sqlalchemy.org/
 
 from sqlalchemy.engine import default
 import jaydebeapi as jaydebeapi_ext
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, unquote
 
 ''' 
 Modify how the base jaydebeapi interacts with jpype and add hooks to 
@@ -38,10 +38,10 @@ def _jdbc_connect_jpype(jclassname, url, driver_args, jars, libs, *args, **kwarg
             # path to shared libraries
             libs_path = osp.pathsep.join(libs)
             args.append('-Djava.library.path=%s' % libs_path)
-        if 'jvm_args' in kwargs.keys():
-            args.append(kwargs['jvm_args'])
-        jvm_path = kwargs.get(
-            "jvm_path", 
+        if '_jvmargs' in kwargs.keys():
+            args.append(kwargs['_jvmargs'])
+        jvmpath = kwargs.get(
+            "_jvmpath", 
             jpype.getDefaultJVMPath()
             )
         if hasattr(jpype, '__version__'):
@@ -54,9 +54,9 @@ def _jdbc_connect_jpype(jclassname, url, driver_args, jars, libs, *args, **kwarg
             except ValueError:
                 pass
         if jaydebeapi_ext.old_jpype:
-            jpype.startJVM(jvm_path, *args)
+            jpype.startJVM(jvmpath, *args)
         else:
-            jpype.startJVM(jvm_path, *args, ignoreUnrecognized=True,
+            jpype.startJVM(jvmpath, *args, ignoreUnrecognized=True,
                            convertStrings=True)
     if not jpype.isThreadAttachedToJVM():
         jpype.attachThreadToJVM()
@@ -92,23 +92,23 @@ def _jdbc_connect_jpype(jclassname, url, driver_args, jars, libs, *args, **kwarg
 jaydebeapi_ext._jdbc_connect = _jdbc_connect_jpype
 
 # DB-API 2.0 Module Interface connect constructor
-def connect(jclass, url, driver_args=None, jars=None, jlibs=None, *args, **kwargs):
+def connect(_class, url, _dargs=None, _jars=None, _libs=None, *args, **kwargs):
     """ from jaydebeapi: modified to allow passthrough of arguments """
-    if isinstance(driver_args, jaydebeapi_ext.string_type):
-        driver_args = [ driver_args ]
-    if not driver_args:
-       driver_args = []
-    if jars:
-        if isinstance(jars, jaydebeapi_ext.string_type):
-            jars = [ jars ]
+    if isinstance(_dargs, jaydebeapi_ext.string_type):
+        _dargs = [ _dargs ]
+    if not _dargs:
+       _dargs = []
+    if _jars:
+        if isinstance(_jars, jaydebeapi_ext.string_type):
+            _jars = [ _jars ]
     else:
-        jars = []
-    if jlibs:
-        if isinstance(jlibs, jaydebeapi_ext.string_type):
-            jlibs = [ jlibs ]
+        _jars = []
+    if _libs:
+        if isinstance(_libs, jaydebeapi_ext.string_type):
+            _libs = [ _libs ]
     else:
-        jlibs = []
-    jconn = jaydebeapi_ext._jdbc_connect(jclass, url, driver_args, jars, jlibs, *args, **kwargs)
+        _libs = []
+    jconn = jaydebeapi_ext._jdbc_connect(_class, url, _dargs, _jars, _libs, *args, **kwargs)
     return jaydebeapi_ext.Connection(jconn, jaydebeapi_ext._converters)
 
 jaydebeapi_ext.connect = connect
@@ -158,13 +158,13 @@ class BaseJDBCDialect(default.DefaultDialect):
                 )    
         '''
         jdbc_kw = [
-            'jclass',
-            'jdriver',
-            'driver_args',
-            'jars',
-            'jlibs',
-            'jvm_path',
-            'jvm_args'
+            '_class',
+            '_driver',
+            '_dargs',
+            '_jars',
+            '_libs',
+            '_jvmpath',
+            '_jvmargs'
         ]
         jdbc_qformat_kw = [
             '_start',
@@ -179,10 +179,10 @@ class BaseJDBCDialect(default.DefaultDialect):
         new_opts = {}
         
         
-        _start = orig_opts.pop('_start', '?')
-        _sep = orig_opts.pop('_sep', '&')
-        _assoc = orig_opts.pop('_assoc', '=')
-        _end = orig_opts.pop('_end', '')
+        _start = unquote(orig_opts.pop('_start', '?'))
+        _sep = unquote(orig_opts.pop('_sep', '&'))
+        _assoc = unquote(orig_opts.pop('_assoc', '='))
+        _end = unquote(orig_opts.pop('_end', ''))
         _raw_host = bool(orig_opts.pop('_raw_host', False))
 
         host = orig_opts.pop("host")
@@ -201,9 +201,9 @@ class BaseJDBCDialect(default.DefaultDialect):
                 host += f'{pre}{k}{_assoc}{quote_plus(str(v))}'
         host += _end
 
-        if 'jars' in new_opts.keys():
-            new_opts['jars'] = new_opts['jars'].split(',')
-        new_opts['url'] = f'jdbc:{new_opts.pop("jdriver")}://{host}'
+        if '_jars' in new_opts.keys():
+            new_opts['_jars'] = unquote(new_opts['_jars']).split(',')
+        new_opts['url'] = unquote(f'jdbc:{new_opts.pop("_jdriver")}://{host}')
 
         return [[], new_opts]
 
