@@ -203,7 +203,7 @@ class BaseJDBCDialect(default.DefaultDialect):
 
         if '_jars' in new_opts.keys():
             new_opts['_jars'] = unquote(new_opts['_jars']).split(',')
-        new_opts['url'] = unquote(f'jdbc:{new_opts.pop("_jdriver")}://{host}')
+        new_opts['url'] = unquote(f'jdbc:{new_opts.pop("_driver")}://{host}')
 
         return [[], new_opts]
 
