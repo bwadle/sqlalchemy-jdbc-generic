@@ -145,6 +145,127 @@ Much like Python, Java leverages a runtime environment when executing actual cod
 
 In my testing and everyday use I have found that most JDBC drivers work just fine using JAVA 8 however I have ran into a few that require a newer version -- such as JAVA 11.
 
+### Where to place JDBC `.jar` files
+The topic of how the JAVA JVM finds classes and libraries is much larger than I am willing to document here but fortunatly we only need to be concerned with three different options.  You can either place your JDBC jar files in a location:
+* same as the working directory of the python script being executed with filename(s) defined in `_jar` argument.
+* anywhere with an **implicit** filepath(s) defined in `_jar` argument.
+* defined in your **System Path** environment variable with no `_jar` argument required.
+
+#### Working Directory
+When the JDBC jar driver file(s) are within the same directory as the `.py` file which sets up the SQLAlchemy Engine you only need to provide the filename of the `.jar` file(s) with the `_jars` argument.
+
+```
+.
+└── myProject/
+    ├── myScript.py
+    └── some-jdbc-driver.0.0.0.jar
+```
+
+```python
+# myScript.py
+
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
+
+eng_url = URL.create(
+    drivername='sqlajdbc',
+    ...
+    query={
+        '_class': 'org.somedb.jdbc.driver',
+        '_driver': 'somedb',
+        '_jars': 'some-jdbc-driver.0.0.0.jar',
+        ...
+    }
+)
+```
+
+If you instead want to place your jar files in another directory that can be easily defined by a relative path from your `.py` file you can use relative file names for the `.jar` file(s)
+
+```
+.
+└── myProject/
+    ├── myScript.py
+    └── jdbc/
+        └── some-jdbc-driver.0.0.0.jar
+```
+
+```python
+# myScript.py
+
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
+
+eng_url = URL.create(
+    drivername='sqlajdbc',
+    ...
+    query={
+        '_class': 'org.somedb.jdbc.driver',
+        '_driver': 'somedb',
+        '_jars': 'jdbc/some-jdbc-driver.0.0.0.jar',
+        ...
+    }
+)
+```
+
+#### Implicit Directory
+When your jar files are somewhere entirely separate from your project or script folder you should refer the the required JDBC jar files with full paths.
+
+```
+.
+├── .../
+│   └── myScript.py
+├── ...
+├── ...
+└── usr/
+    └── assets/
+        └── jdbc/
+            └── some-jdbc-driver.0.0.0.jar
+```
+
+```python
+# myScript.py
+
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
+
+eng_url = URL.create(
+    drivername='sqlajdbc',
+    ...
+    query={
+        '_class': 'org.somedb.jdbc.driver',
+        '_driver': 'somedb',
+        '_jars': '/usr/assets/jdbc/somedb-jdbc-driver.0.0.0.jar',
+        ...
+    }
+)
+```
+
+#### System Path
+If you place your jar files in a directory that is defined in your system's `PATH` environment variable then it is not required to supply a `_jars` argument as those `.jar` files will be included when the JVM attempts to retrive the class provided with the `_class` arguement.
+
+> On Windows OS you can check for jar files on a system path location by running the following command:
+>
+> `C:> where *.jar`
+
+If your JDBC `.jar` file(s) are accessible on the System Path then you only need to define the `_class` and `_driver` arguements:
+
+```python
+# myScript.py
+
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
+
+eng_url = URL.create(
+    drivername='sqlajdbc',
+    ...
+    query={
+        '_class': 'org.somedb.jdbc.driver',
+        '_driver': 'somedb',
+        ...
+    }
+)
+```
+
 ### `_jvmpath`
 
 Your environment default Java Runtime Environment uses the OS Environment Variable named `JAVA_HOME` to point to the root folder for your JRE.  If you want to use an alternative version of JAVA or if `JAVA_HOME` is not defined you can use the `_jvmpath` connection string argument to provide the path to the desired JVM driver file.
