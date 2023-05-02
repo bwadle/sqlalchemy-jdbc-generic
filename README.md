@@ -58,8 +58,8 @@ eng_url = URL.create(
     drivername='sqlajdbc',
     host='local.db',
     query={
-        '_class':'org.sqlite.JDBC',
-        '_driver':'sqlite'
+        '_class': 'org.sqlite.JDBC',
+        '_driver': 'sqlite'
     }
 )
 
@@ -157,7 +157,7 @@ eng_url = URL.create(
     drivername='sqlajdbc',
     ...
     query={
-        '_jvmpath':'/path/to/jvm.dll',
+        '_jvmpath': '/path/to/jvm.dll',
         ...
     }
 )
@@ -183,8 +183,8 @@ eng_url = URL.create(
     drivername='sqlajdbc',
     ...
     query={
-        '_jvmpath':'/path/to/jvm.dll',
-        '_jvmargs':'--add-opens=java.base/java.nio=ALL-UNNAMED',
+        '_jvmpath': '/path/to/jvm.dll',
+        '_jvmargs': '--add-opens=java.base/java.nio=ALL-UNNAMED',
         ...
     }
 )
@@ -195,8 +195,11 @@ eng = create_engine(eng_url)
 ## Database Flavor Examples
 This section shows some example patterns for connection to different database versions.  All database hosts, usernames and passwords are either omitted or ficticious -- for obvious reasons.
 
-> In all of the below patterns I am implicitly referring to the JDBC Driver jar file(s) -- `'_jars': '*.jar'` -- I used in testing and providing links to the source from which they were obtained in the notes at the beginning of each section.  
+> In all of the below patterns I am implicitly referring to the JDBC Driver jar file(s) (`'_jars': '*.jar'`) I used in testing and providing links to the source from which they were obtained in the notes at the beginning of each section.  
+> 
 > Normally I would place these jar files in a directory defined within my OS Level `PATH` environment variable.  However, in these examples we assume that the jar files exist in the same directory as the python file being executed.
+> 
+> I have also obsfucated any release versioning within the filename of each jar with `#` charactors as versions and releases of these files will no doubt change over time.
 
 ### SQLite
 > SQLAlchemy supports SQLite natively so there may be no legitimate reason to leverage the SQLite JDBC driver over the native SQLite dialect but you could if you wanted to.
@@ -213,9 +216,218 @@ eng_url = URL.create(
     drivername='sqlajdbc',
     host='local.db',
     query={
-        '_class':'org.sqlite.JDBC',
-        '_driver':'sqlite',
-        '_jars': 'sqlite-jdbc-3.41.2.1.jar'
+        '_class': 'org.sqlite.JDBC',
+        '_driver': 'sqlite',
+        '_jars': 'sqlite-jdbc-#.##.#.#.jar'
+    }
+)
+
+eng = create_engine(eng_url)
+
+with eng.connect() as c:
+    res = c.execute('SELECT CURRENT_DATE').fetchall()
+    print(res)
+```
+
+### MySQL
+> SQLAlchemy supports MySQL natively so there may be no legitimate reason to leverage the MySQL JDBC driver over the native MySQL dialect but you could if you wanted to.
+> 
+>   __DRIVER__: https://dev.mysql.com/downloads/connector/j/
+>
+>   __DOCUMENTATION__: https://dev.mysql.com/doc/connector-j/8.0/en/
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
+
+eng_url = URL.create(
+    drivername='sqlajdbc',
+    host='myMySQLDB.myServer.com',
+    username='myUsername',
+    password='myFakePa$$w0rd',
+    port=3306,
+    query={
+        '_class': 'com.mysql.cj.jdbc.Driver',
+        '_driver': 'mysql',
+        '_jars': 'mysql-connector-j-#.#.##.jar'
+    }
+)
+
+eng = create_engine(eng_url)
+
+with eng.connect() as c:
+    res = c.execute('SELECT current_date').fetchall()
+    print(res)
+```
+
+### MariaDB
+>   __DRIVER__: https://mariadb.org/connector-java/all-releases/
+>
+>   __DOCUMENTATION__: https://mariadb.com/kb/en/about-mariadb-connector-j/
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
+
+eng_url = URL.create(
+    drivername='sqlajdbc',
+    host='myMariaDB.myServer.com',
+    username='myUsername',
+    password='myFakePa$$w0rd',
+    port=3306,
+    query={
+        '_class': 'org.mariadb.jdbc.Driver',
+        '_driver': 'mariadb',
+        '_jars': 'mariadb-java-client-#.#.#.jar'
+    }
+)
+
+eng = create_engine(eng_url)
+
+with eng.connect() as c:
+    res = c.execute('SELECT current_date').fetchall()
+    print(res)
+```
+
+### Snowflake
+> There is an officially supported SQLAlchemy Dialect for Snowflake which would support far more DBAPI functionality than leveraging this module and the Snowflake JDBC driver.  Unless you have a specific reason to leverage the Snowflake JDBC driver I would recommend using the following dialect instead:
+> 
+> `snowflake-sqlalchemy` 
+> 
+> **Snowflake SQLAlchemy Documentation** → https://docs.snowflake.com/developer-guide/python-connector/sqlalchemy
+
+> The Snowflake jdbc pattern for passing the user password in the query needs to be URL encoded in order to be passed properly.  In this pattern I opted to use quote_plus from the urllib module. 
+> 
+>   __DRIVER__: https://docs.snowflake.com/en/developer-guide/jdbc/jdbc-download
+>
+>   __DOCUMENTATION__: https://docs.snowflake.com/en/developer-guide/jdbc/jdbc-configure
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
+from urllib.parse import quote_plus
+
+eng_url = URL.create(
+    drivername='sqlajdbc',
+    host='my-snowflake-account.snowflakecomputing.com',
+    query={
+        '_class': 'net.snowflake.client.jdbc.SnowflakeDriver',
+        '_driver': 'snowflake',
+        '_jars': 'snowflake-jdbc-#.##.#.jar',
+        'user': 'myUsername',
+        'password': quote_plus('myFakePa$$w0rd'),
+        'db': 'MY_SNOW_DB',
+        'role': 'MY_SNOW_ROLENAME',
+        'schema': 'MY_SNOW_SCHEMA',
+        'warehouse': 'MY_SNOW_WAREHOUSE'
+    }
+)
+
+eng = create_engine(eng_url)
+
+with eng.connect() as c:
+    res = c.execute('SELECT CURRENT_DATE').fetchall()
+    print(res)
+```
+
+### Teradata
+> There is an officially supported SQLAlchemy dialect for Teradata which would support far more DBAPI functionality than leveraging this module and the Teradata JDBC driver.  Unless you have a specific reason to leverage the Teradata JDBC driver I would recommend using the following dialect instead:
+> 
+> `teradatasqlalchemy` 
+>
+> **Teradata SQLAlchemy Documentation** → https://pypi.org/project/teradatasqlalchemy/
+
+>The Teradata jdbc connection string query pattern deviates from popular convention with both the start and separator charactors.  These would need to be defined with the `_start` and `_sep` query arguments as shown in the below pattern.
+>
+>   __DRIVER__: https://downloads.teradata.com/download/connectivity/jdbc-driver
+>
+>   __DOCUMENTATION__: https://teradata-docs.s3.amazonaws.com/doc/connectivity/jdbc/reference/current/frameset.html
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
+
+eng_url = URL.create(
+    drivername='sqlajdbc',
+    host='myTeradataDB.myServer.com',
+    query={
+        '_class': 'com.teradata.jdbc.TeraDriver',
+        '_driver': 'teradata',
+        '_jars': 'terajdbc-##.##.##.##.jar',
+        '_start': '/',
+        '_sep': ',',
+        'DBS_PORT': '1025',
+        'user': 'myUsername',
+        'password': 'myFakePa$$w0rd'
+    }
+)
+
+eng = create_engine(eng_url)
+
+with eng.connect() as c:
+    res = c.execute('SELECT current_date').fetchall()
+    print(res)
+```
+
+### Vertica
+> There is an officially supported SQLAlchemy dialect for Vertica which would support far more DBAPI functionality than leveraging this module and the Vertica JDBC driver.  Unless you have a specific reason to leverage the Vertica JDBC driver I would recommend using the following dialect instead:
+> 
+> `vertica-sqlalchemy-dialect` 
+>
+> **Vertica SQLAlchemy Documentation** → https://github.com/vertica/vertica-sqlalchemy-dialect
+
+>The vertica jdbc pattern for passing the user password in the query needs to be URL encoded in order to be passed properly.  In this pattern I opted to use quote_plus from the urllib module. 
+>
+>   __DRIVER__: https://www.vertica.com/download/vertica/client-drivers/
+>
+>   __DOCUMENTATION__: https://www.vertica.com/docs/11.0.x/HTML/Content/Authoring/ConnectingToVertica/ClientJDBC/JDBCConnectionProperties.htm
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
+from urllib.parse import quote_plus
+
+eng_url = URL.create(
+    drivername='sqlajdbc',
+    host='myVerticaDB.myServer.com',
+    port=5433,
+    query={
+        '_class': 'com.vertica.jdbc.Driver',
+        '_driver': 'vertica',
+        '_jars': 'vertica-jdbc-##.#.#-#.jar',
+        'user': 'myUsername',
+        'password': quote_plus('myFakePa$$w0rd')
+    }
+)
+
+eng = create_engine(eng_url)
+
+with eng.connect() as c:
+    res = c.execute('SELECT CURRENT_DATE').fetchall()
+    print(res)
+```
+
+### Palantir Foundry
+>The Palantir Foundry JDBC connector requires a JAVA 11 JVM and a specific argument be passed to the JVM in order for one of the leveraged Java classes to operate as intended.  If your default JVM is lower than version 11 you will need to specify an alternate jvm using `_jvmpath`.
+>
+>   __DRIVER__: https://www.palantir.com/docs/foundry/analytics-connectivity/downloads/
+>
+>   __DOCUMENTATION__: https://www.palantir.com/docs/foundry/analytics-connectivity/odbc-jdbc-drivers/#jdbc-1
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
+
+eng_url = URL.create(
+    drivername='sqlajdbc',
+    host='myDomain.palantirfoundry.com',
+    query={
+        '_class': 'com.palantir.foundry.sql.jdbc.FoundryJdbcDriver',
+        '_driver': 'foundrysql',
+        '_jars': 'foundry-sql-jdbc-driver-#.#.#-withdep.jar',
+        '_jvmpath': '/path/to/Java/11/jvm.dll'
+        '_jvmargs': '--add-opens=java.base/java.nio=ALL-UNNAMED'
+        'password': '<token-guid-goes-here>'
     }
 )
 
@@ -227,53 +439,33 @@ with eng.connect() as c:
 ```
 
 ### Oracle
-> SQLAlchemy supports Oracle natively so there may be no legitimate reason to leverage the Oracle JDBC driver over the native oracle dialect but you could if you wanted to.
-
-
-### MySQL
-> Tested -- Documentation Pending
-
-### MariaDB
-> Tested -- Documentation Pending
+> SQLAlchemy supports Oracle natively so there may be no legitimate reason to leverage the Oracle JDBC driver over the native dialect but you could if you wanted to.
+>
+> Should work as-is but there may be some idiocyncracies to identify in the JDBC pattern for Oracle Service Names and SIDs.
+>
+> Will verify in future updates.
 
 ### Microsoft SQL Server
-> Testing
+> SQLAlchemy supports MSSQL natively so there may be no legitimate reason to leverage the MSSQL JDBC driver over the native dialect but you could if you wanted to.
+>
+> Should work as-is but the MSSQL JDBC query pattern uses semi-colons as both the start and separator charactor.
+>
+> Will verify in future updates.
 
 ### PostgreSQL
-> Testing
+> SQLAlchemy supports PostgreSQL natively so there may be no legitimate reason to leverage the PostgreSQL JDBC driver over the native dialect but you could if you wanted to.
 
 ### MongoDB
-> Testing
+> Untested
 
 ### Redis
-> Testing
+> Untested
 
 ### IBM DB2
-> Testing
+> Untested
 
 ### Elasticsearch
-> Testing
+> Untested
 
 ### Microsoft Access
-> Testing
-
-### Snowflake
-> Tested -- Documentation Pending
-
-### Cassandra
-> Testing
-
-### Databricks
-> Testing
-
-### Teradata
-> Tested -- Documentation Pending
-
-### Microsoft Azure SQL Database
-> Testing
-
-### Vertica
-> Testing
-
-### Palantir Foundry
-> Tested -- Documentation Pending
+> Untested
