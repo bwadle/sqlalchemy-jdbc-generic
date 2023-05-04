@@ -121,8 +121,11 @@ class BaseJDBCDialect(default.DefaultDialect):
     driver = 'jaydebeapi_ext'
 
     @classmethod
-    def dbapi(cls):
+    def import_dbapi(cls):
         return jaydebeapi_ext
+    
+    # retain a reference to dbapi() for backwards compatibility
+    dbapi = import_dbapi
 
     def create_connect_args(self, url):
         '''
