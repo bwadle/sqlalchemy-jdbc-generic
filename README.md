@@ -3,41 +3,49 @@ Generic JDBC dialect for SQLAlchemy.
 
 The overall purpose of this dialect is to allow -- _at a minimum_ -- conectivity and consumer query access to any database with an available JDBC driver.
 
-The genesis of this codebase was heavily influenced by `JayDeBeAPI` and `sqlalchemy-jdbcapi`.
-
-> [JayDeBeAPI](https://pypi.org/project/JayDeBeApi/) by [Bastion Bowe](https://github.com/baztian)
-
-> [sqlalchemy-jdbcapi](https://pypi.org/project/sqlalchemy-jdbcapi/) by [Danesh Patel](https://github.com/daneshpatel) 
+>This codebase was heavily influenced by `JayDeBeAPI` and `sqlalchemy-jdbcapi`.
+>
+>   [JayDeBeAPI](https://pypi.org/project/JayDeBeApi/) by [Bastion Bowe](https://github.com/baztian)
+>
+>   [sqlalchemy-jdbcapi](https://pypi.org/project/sqlalchemy-jdbcapi/) by [Danesh Patel](https://github.com/daneshpatel) 
 
 ## Install
+Install using the PyPi Repository:
+```
+pip install sqlalchemy-jdbc-generic
+```
 
-Build and install using `pip` and `setuptools`:
+### Install from Source
 
 1. Clone repository
+   ```
+    git clone https://github.com/bwadle/sqlalchemy-jdbc-generic
+   ```
 2. Navigate to cloned directory
-3. Build wheel
+   ```
+    cd sqlalchemy-jdbc-generic
+   ```
+3. Upgrade PyPA build and build wheel
     ```
+    python -m pip install --upgrade build
     python -m build -w
     ```
 4. pip install from built wheel file
     ```
     python -m pip install --find-links=dist sqlalchemy-jdbc-generic
-    ```
-> codebase has not yet been submitted to pypi.  This will happen in future releases.
->    ```
->    pip install sqlalchemy-jdbc-generic
->    ```
+    ``` 
 
 ## Usage
 
 Simple example of connecting to an sqlite local db file when an applicable SQLite JDBC jar file is available in your system path.
 > See [JVM Options](#jvm-options) section for instructions on how to ensure your JDBC jar files are accessible.
 
-To connect to an SQLite database file where the jdbc connection string is: `jdbc:sqlite://local.db` :
+To connect to an SQLite database file where the jdbc connection string is `jdbc:sqlite://local.db` :
 
 ```python
 from sqlalchemy import create_engine
 
+# engine connection string provided directly to the create_engine method.
 eng = create_engine(
     'sqlajdbc://local.db?_class=org.sqlite.JDBC&_driver=sqlite'
     )
@@ -48,12 +56,15 @@ with eng.connect() as c:
     
 ```
 
-Alternatively, you can use the SQLAlchemy `URL.create()` method instead of an engine URL string:
+Alternatively, you can use the SQLAlchemy `URL.create()` method instead of an engine connection string:
+
+> This approach is recommended and will be used for the remainder of this documentation.  You can still opt to create your engines using engine connection strings but they can get quite long and hard to read in most cases.
 
 ```python
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 
+# engine connection URL created using URL.create method
 eng_url = URL.create(
     drivername='sqlajdbc',
     host='local.db',
@@ -72,11 +83,11 @@ with eng.connect() as c:
 
 ## Arguments
 
-> All arguments consumed by `sqlajdbc` are prefaced with an underscore (`_`) to ensure compatability and differentiation from any JDBC Driver argument that may be leveraged by the actual JDBC Driver being used.
+> All arguments consumed by the *sqlajdbc* dialect are prefaced with an underscore (`_`) to ensure differentiation from any JDBC Driver parameter options.
 
-The `sqlajdbc` dialect requires the jdbc class (`_class`) and drivername (`_driver`) be passed in the query section of the engine URL.
+The *sqlajdbc* dialect requires the **JDBC class** (`_class`) and **JDBC driver name** (`_driver`) be passed in the *query* section of the engine URL.
 
-Other arguments specific to `sqlajdbc` can be passed to change the behavior of how your engine connection string is interpreted and are described below:
+Other arguments specific to the _sqlajdbc_ dialect can be passed to change the behavior of how the engine connection options are interpreted and are described below:
 
 > The examples in the below table are taken from an example connection to a Snowflake Database using the Snowflake JDBC Driver.  
 > 
@@ -89,13 +100,12 @@ Other arguments specific to `sqlajdbc` can be passed to change the behavior of h
 |--------|-----------|-------|
 |`_class`|The **Java Class** of the JDBC driver to use|net.snowflake.client.jdbc.SnowflakeDriver|
 |`_driver`|The **driver name** to be placed between `jdbc:` and `://` in the jdbc connection string. `jdbc:<driver>://`| snowflake |
-|`_jars`| path(s) to the **jar files** for JDBC driver given as a string or string representation of a list of paths | `/path/to/driver.jar` or `[/path/to/driver1.jar,/path/to/driver2.jar,...]`|
-|`_libs`| path(s) which contain jar files for the JDBC driver | `/path/to/myDrivers/` |
+|`_jars`| path(s) to the **jar files** for JDBC driver given as a string or string representation of a list of paths | see [Where to Place Jar Files](#where-to-place-jdbc-jar-files) section|
 |`_jvmpath`| path to the **Java Virtual Machine** driver (`jvm.so`, `jvm.dll`) to be used instead of the default JVM within the path pointed to by the `JAVA_HOME` os environment variable. | `/path/to/jvm.so` |
 |`_jvmargs`| **JVM arguments** be be passed to `jpype.startJVM()`| see [jpype JVM Functions Documentation](https://jpype.readthedocs.io/en/latest/api.html#jpype.startJVM)
 
 ### Query Arguments
-The default behavior is to assume query parameters are separated from the host url by a question mark (`?`) and each parameter name and value are separated by ampersands (`&`) with an equal sign (`=`) used to separate the name and value for each parameter pair.
+The default behavior is to assume query parameters are separated from the host url by a question mark (`?`) and each parameter name-value pair is separated by ampersands (`&`) with an equal sign (`=`) used to separate the name and value for each.
 
 `jdbc:driver://host`__`?`__`name`**`=`**`value`__`&`__`name`__`=`__`value`__`&`__`...`
 
@@ -103,7 +113,9 @@ This is the most typical pattern found across the various JDBC Driver implementa
 
 `jdbc:teradata://host`**`/`**`name=value`**`,`**`name=value`**`,`**`...`
 
-SQLAlchemy translates and converts each parameter into a python collection and then builds back the query from its parameter parts which will ultimately be used to construct the JDBC Connection String.  In order to provide the Teradata JDBC Driver with the connection string format that it expects we need to tell SQLAlchemy to **use alternative symbols** when reconstructing the **query string**.  These options are described below:
+SQLAlchemy translates and converts each parameter into a python collection and then builds back the query parts which will ultimately be used to construct the JDBC Connection String.  
+
+In order to provide the Teradata JDBC Driver with the connection string format that it expects we need to tell SQLAlchemy to **use alternative symbols** when reconstructing the **query string**.  These options are described below:
 
 |argument|description|default|
 |--------|-----------|-------|
@@ -139,14 +151,16 @@ eng = create_engine(eng_url)
 > `sqlajdbc://host?_start=/&_sep=,&_driver=teradata&_class=com.teradata.jdbc.TeraDriver`
 
 ## JVM Options
-JDBC Drivers leverage the Java programming language to setup and expose DBAPI patterns that allow SQLAlchemy to "_do its thing_".  
+JDBC Drivers leverage the Java programming language to setup and expose DBAPI patterns that allow SQLAlchemy to "_do it's magic_".  
 
 Much like Python, Java leverages a runtime environment when executing actual code instructions and code written in one version of Java may not be compatible with all runtime environments.
 
 In my testing and everyday use I have found that most JDBC drivers work just fine using JAVA 8 however I have ran into a few that require a newer version -- such as JAVA 11.
 
-### Where to place JDBC `.jar` files
-The topic of how the JAVA JVM finds classes and libraries is much larger than I am willing to document here but fortunatly we only need to be concerned with three different options.  You can either place your JDBC jar files in a location:
+### Where to place JDBC files
+> The topic of how the JAVA JVM finds classes and libraries is much larger than I am willing to document here.  While there are surely other ways to organize and access your `.jar` files, I have only ever needed to use one of the three described below. 
+
+You can place your JDBC jar files in a location:
 * same as the working directory of the python script being executed with filename(s) defined in `_jar` argument.
 * anywhere with an **implicit** filepath(s) defined in `_jar` argument.
 * defined in your **System Path** environment variable with no `_jar` argument required.
